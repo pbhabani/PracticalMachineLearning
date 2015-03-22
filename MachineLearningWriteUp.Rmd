@@ -1,0 +1,69 @@
+---
+title: "Prediction Assignment Writeup"
+output: html_document
+---
+
+## 1. Executive Summary
+
+Using devices such as Jawbone Up, Nike FuelBand, and Fitbit it is now possible to collect a large amount of data about personal activity relatively inexpensively. These type of devices are part of the quantified self movement - a group of enthusiasts who take measurements about themselves regularly to improve their health, to find patterns in their behavior, or because they are tech geeks. One thing that people regularly do is quantify how much of a particular activity they do, but they rarely quantify how well they do it. 
+
+In this project, our goal will be to use data from accelerometers on the belt, forearm, arm, and dumbell of 6 participants. They were asked to perform barbell lifts correctly and incorrectly in 5 different ways (More information is available from the website here: http://groupware.les.inf.puc-rio.br/har). We have to make a prediction using devices such as Jawbone Up, Nike FuelBand, and Fitbit (http://groupware.les.inf.puc-rio.br/har). But our goal is to identify how well they do the exercise. So we have to identify when they make the exercise exactly according to the specification (Class A), when they throw the elbows to the front (Class B), when they lift the dumbbell only halfway (Class C), when they lower the dumbbell only halfway (Class D) and when they throw the hips to the front (Class E).
+
+
+## 2. Data
+
+The first thing to do is load the data (https://d396qusza40orc.cloudfront.net/predmachlearn/pml-training.csv), libraries, set the seed and make a training data set (60%) and a test data set (40%):
+
+```{r}
+set.seed(123)
+library(foreign)
+library(randomForest)
+library(caret) 
+library(survival)
+library(ggplot2)
+training<-read.csv('pml-training.csv',sep=',',header=T)
+select<-createDataPartition(training$user_name,p=0.6,list=FALSE)
+trai<-training[ select,]
+test<-training[-select,]
+
+```
+
+## 3. Preprocessing
+
+Now, we study and try to understand what kind of data we have. Under our humble opinion, we think it is best to focus on only those variables that mark the positional place in a plane (its coordinates (x, y, z)). We think this because thanks to these variables we can identify quickly to try to pass the specifications A, and not make the mistakes B to E.
+
+Those variables are:
+
+```{r}
+aux<-trai[,c(37:45,60:68,113:121,151:160)]
+names(aux)
+
+```
+Some code example of plots that we used, could be:
+
+```{r}
+qplot(gyros_belt_x,gyros_belt_y,colour=user_name,data=trai)
+qplot(accel_arm_x,accel_arm_z,colour=user_name,data=trai)
+qplot(magnet_dumbbell_y,magnet_dumbbell_z,colour=user_name,data=trai)
+
+```
+
+So, watching and studying the plots, we could identified heterogeneity when dealing with variables that have the word "gyros", so we thought that these variables did not contribute much. But still, we will use those variables in the model but first, just in case.
+
+
+## 4. Model
+
+Our model is random forest
+
+```{r}
+model<-train(classe~.,data=aux,method='rf')
+aux<-test[,c(37:45,60:68,113:121,151:160)]
+pred<-predict(model,aux)
+confusionMatrix(pred,aux$classe)
+
+```
+
+It seems that model is a good fit (Accuracy: 0.96)
+
+
+
